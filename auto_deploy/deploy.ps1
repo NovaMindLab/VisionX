@@ -91,10 +91,10 @@ if (-not (Test-Path $ReleaseDir)) {
 }
 
 $ReleaseFiles = Get-ChildItem -Path $ReleaseDir -File | Where-Object {
-    $_.Extension -eq ".exe" -or $_.Extension -eq ".blockmap" -or $_.Name -eq "latest.yml"
+    ($_.Name -like "*$Version*") -or ($_.Name -eq "latest.yml")
 }
 if ($ReleaseFiles.Count -eq 0) {
-    Write-Error "No release files found in $ReleaseDir!"
+    Write-Error "No release files matching version $Version found in $ReleaseDir!"
     exit 1
 }
 
@@ -113,12 +113,12 @@ if ([string]::IsNullOrWhiteSpace($Notes)) {
 
 Open-source AI smart glasses PC debug console for Seeed Studio XIAO ESP32-S3 Sense.
 
-### Features
-* USB CDC Serial connection with auto-reconnect
-* OV2640 High resolution photo capture and display
-* Live video streaming (QVGA 320x240 @ 12-18 FPS) with real-time FPS & bitrate stats
-* Differential auto-update support (Delta blockmap)
-* Hardware diagnostics (Camera, Mic, OPI PSRAM)
+### 🌟 What's New in $Tag
+* **Photo Capture Sync & Global Cache**: Implemented主进程 CameraManager photo caching (`lastPhoto`) and active UI sync. Seamless display without race condition losses.
+* **Streaming Delimiter Parser**: Refactored SerialManager to use robust index-based delimiter matching (`===IMG_END===` / `===FRAME_END===`), completely immune to fragmentation and line-break anomalies.
+* **ESP32 Firmware Optimization**: Added `Serial.flush()` after photo and frame streaming packets to guarantee 100% immediate hardware FIFO dispatch.
+* **Camera Connection Status**: Added real-time serial status indicator in Camera view (`🟢 串口已连接` / `🔴 串口未连接`), plus loading indicator during exposure & transmission.
+* **Differential Auto-Update Support**: Full blockmap delta upgrade support for seamless in-app background upgrades.
 
 ### Download & Run
 * **Installer**: Download `VisionX-SmartGlass-Console Setup $Version.exe`
@@ -148,8 +148,19 @@ if ($Prerelease) {
 }
 
 # Check if release exists
-$existingCheck = gh release view $Tag 2>&1
-if ($LASTEXITCODE -eq 0) {
+$releaseExists = $false
+$origEAP = $ErrorActionPreference
+$ErrorActionPreference = "SilentlyContinue"
+try {
+    $existingOutput = & gh release view $Tag 2>&1
+    if ($LASTEXITCODE -eq 0) {
+        $releaseExists = $true
+    }
+} finally {
+    $ErrorActionPreference = $origEAP
+}
+
+if ($releaseExists) {
     Write-Host "Release $Tag already exists. Uploading new binaries..." -ForegroundColor Yellow
     foreach ($f in $ReleaseFiles) {
         gh release upload $Tag $f.FullName --clobber

@@ -41,10 +41,10 @@ Smart Glass Debug Console 是专门针对 **Seeed Studio XIAO ESP32-S3 Sense** �
 | 章节 | 文档名称 | 核心内容 |
 | :--- | :--- | :--- |
 | **01** | [串口通信与协议架构](./01-serial-communication.md) | USB CDC 自动探测、热插拔重连、DTR/RTS 流控、2000行日志缓存 |
-| **02** | [摄像头拍照与实时视频流](./02-camera-and-video-streaming.md) | OV2640 双缓冲驱动、单张抓拍协议、连续视频流 (15 FPS)、静默直通 |
+| **02** | [摄像头拍照与实时视频流](./02-camera-and-video-streaming.md) | OV2640 驱动、全局成片持久化、定界符流式解析引擎、15 FPS 实时视频流、硬件 FIFO 刷新 |
 | **03** | [安装包体积精简优化](./03-package-optimization-and-locales.md) | 语言包裁剪 (减少 45MB)、UPX 加壳风险剖析、行业标准实践 |
 | **04** | [自动化构建发布与 CI/CD](./04-auto-deploy-and-cicd.md) | `auto_deploy` 一键发布脚本、GitHub CLI 对接、GitHub Actions 流水线 |
-| **05** | [Blockmap 差分增量升级体系](./05-differential-update-guide.md) | 增量数据块拉取、启动自检弹窗、静默下载与一键重启安装 |
+| **05** | [Blockmap 差分增量升级体系](./05-differential-update-guide.md) | 增量数据块拉取、启动自检弹窗、产物命名规范与 404 避坑指南 |
 | **06** | [功能规划与迭代 TODO 清单](./06-future-feature-roadmap.md) | 多模态 AI 识图、PDM 麦克风示波器、相机调参台、无线图传规划 |
 
 ---

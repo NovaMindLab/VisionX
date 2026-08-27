@@ -59,7 +59,52 @@
 ## 三、下一版本发布与差分更新实测流程
 
 当您后续修改了代码想推送新版本时：
-1. 打开 `eproject/package.json`，修改版本号（如 `1.0.2`）；
+1. 打开 `eproject/package.json`，修改版本号（如 `1.0.3`）；
 2. 运行 `auto_deploy/deploy.bat`；
-3. 发布成功后，所有处于 `1.0.1` 版本的用户启动软件时，便会自动弹窗提示发现 `v1.0.2`；
-4. 用户点击【立即差分升级】，后台只拉取几兆的改动数据，秒级更新完毕！
+3. 发布成功后，所有处于旧版本的用户启动软件时，便会自动弹窗提示发现新版本；
+4. 用户点击【立即差分升级】，后台只拉取几兆的变动数据，秒级更新完毕！
+
+---
+
+## 四、差分更新 404 故障排查与产物命名规范 (Troubleshooting)
+
+在实测自动更新过程中，可能遇到类似如下错误：
+```text
+Cannot download "https://github.com/.../VisionX-SmartGlass-Console-Setup-1.0.3.exe", status 404:
+```
+
+### 1. 根本原因深度分析
+* **`latest.yml` 的生成规则**：`electron-builder` 在根据构建结果生成 `latest.yml` 时，会将文件名中的空格自动转义替换为**连字符 (`-`)**（例如 `VisionX-SmartGlass-Console-Setup-1.0.3.exe`）；
+* **操作系统与平台转义差异**：如果未明确指定 `artifactName`，`electron-builder` 在 Windows 磁盘上生成的默认文件名为 `VisionX-SmartGlass-Console Setup 1.0.3.exe`（带有空格）；
+* 当通过 GitHub CLI 或网页上传包含空格的文件时，GitHub 会自动将空格替换为**点号 (`.`)**（变为 `VisionX-SmartGlass-Console.Setup.1.0.3.exe`）；
+* **结果**：`latest.yml` 索引清单请求的是 `-Setup-`，而 GitHub Releases 实际存放的是 `.Setup.`，导致 `electron-updater` 下载时命中 **HTTP 404 Not Found**！
+
+### 2. 标准化解决方案
+
+在 `eproject/package.json` 的 `build` 配置中，**严禁使用默认包含空格的命名，必须显式声明无空格的 `artifactName`**：
+
+```json
+"win": {
+  "icon": "build/icon.png",
+  "target": [
+    "nsis",
+    "portable"
+  ]
+},
+"nsis": {
+  "oneClick": false,
+  "allowToChangeInstallationDirectory": true,
+  "differentialPackage": true,
+  "artifactName": "${productName}-Setup-${version}.${ext}"
+},
+"portable": {
+  "artifactName": "${productName}-${version}.${ext}"
+}
+```
+
+* **规范效果**：
+  1. 磁盘生成的文件即为 `VisionX-SmartGlass-Console-Setup-1.0.3.exe`；
+  2. 生成的块映射为 `VisionX-SmartGlass-Console-Setup-1.0.3.exe.blockmap`；
+  3. `latest.yml` 索引与磁盘文件名 100% 保持一致；
+  4. GitHub Releases 上传后不会触发任何字符替换；
+  5. 客户端请求直接 `HTTP 200 OK`，差分增量升级极速拉取！
