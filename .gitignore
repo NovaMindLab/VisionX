@@ -1,0 +1,56 @@
+# ==============================================================================
+# VisionX - AI Smart Glasses Git Ignore Configuration
+# ==============================================================================
+
+# Node / Electron / Web Frontend
+node_modules/
+dist/
+dist-electron/
+out/
+.npm
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# PlatformIO / ESP32 Embedded Toolchain & Builds
+.pio/
+.pioenvs/
+.piolibdeps/
+.clangd/
+compile_commands.json
+*.elf
+*.bin
+*.map
+*.hex
+*.o
+*.a
+*.d
+
+# Python / AI Backend Environments
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Operating System & IDE Artifacts
+.DS_Store
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.bak
+*.tmp
+*.swp
+*~
+
+# Editor-specific (Preserve useful team configs, ignore user state)
+.idea/
+*.sublime-workspace
+.vscode/*.log
