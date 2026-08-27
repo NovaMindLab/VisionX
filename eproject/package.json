@@ -1,6 +1,6 @@
 {
   "name": "smart-glass-debug-console",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "VisionX Smart Glass Debug Console for ESP32-S3",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -61,6 +61,7 @@
       "node_modules/@serialport/**/*"
     ],
     "win": {
+      "icon": "build/icon.png",
       "target": [
         "nsis",
         "portable"

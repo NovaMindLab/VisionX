@@ -33,6 +33,7 @@ function createWindow() {
     minWidth: 1024,
     minHeight: 680,
     title: 'Smart Glass Debug Console',
+    icon: path.join(__dirname, '../build/icon.png'),
     backgroundColor: '#0f172a',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),

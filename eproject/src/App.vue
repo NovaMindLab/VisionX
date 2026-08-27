@@ -3,10 +3,10 @@
     <!-- 顶部主导航栏 -->
     <header class="app-header">
       <div class="brand">
-        <span class="logo">👓</span>
+        <img class="logo-img" src="/logo.svg" alt="VisionX Logo" />
         <div class="brand-text">
           <h1>Smart Glass Debug Console</h1>
-          <span class="sub">Seeed Studio XIAO ESP32-S3 Sense 联调控制台</span>
+          <span class="sub">VisionX • ESP32-S3 智能眼镜控制台</span>
         </div>
       </div>
 
@@ -170,8 +170,12 @@ body {
   gap: 12px;
 }
 
-.logo {
-  font-size: 24px;
+.logo-img {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  box-shadow: 0 0 12px rgba(56, 189, 248, 0.25);
+  display: block;
 }
 
 .brand-text h1 {
