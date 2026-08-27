@@ -90,14 +90,16 @@ if (-not (Test-Path $ReleaseDir)) {
     exit 1
 }
 
-$ExeFiles = Get-ChildItem -Path $ReleaseDir -Filter "*.exe" -File
-if ($ExeFiles.Count -eq 0) {
-    Write-Error "No .exe files found in $ReleaseDir!"
+$ReleaseFiles = Get-ChildItem -Path $ReleaseDir -File | Where-Object {
+    $_.Extension -eq ".exe" -or $_.Extension -eq ".blockmap" -or $_.Name -eq "latest.yml"
+}
+if ($ReleaseFiles.Count -eq 0) {
+    Write-Error "No release files found in $ReleaseDir!"
     exit 1
 }
 
-Write-Host "Found binaries to release:" -ForegroundColor Cyan
-foreach ($f in $ExeFiles) {
+Write-Host "Found files to release (including differential blockmap & manifests):" -ForegroundColor Cyan
+foreach ($f in $ReleaseFiles) {
     $sizeMB = [math]::Round($f.Length / 1MB, 2)
     Write-Host "  - $($f.Name) ($sizeMB MB)" -ForegroundColor White
 }
@@ -115,6 +117,7 @@ Open-source AI smart glasses PC debug console for Seeed Studio XIAO ESP32-S3 Sen
 * USB CDC Serial connection with auto-reconnect
 * OV2640 High resolution photo capture and display
 * Live video streaming (QVGA 320x240 @ 12-18 FPS) with real-time FPS & bitrate stats
+* Differential auto-update support (Delta blockmap)
 * Hardware diagnostics (Camera, Mic, OPI PSRAM)
 
 ### Download & Run
@@ -132,7 +135,7 @@ $TempNotesFile = [System.IO.Path]::GetTempFileName()
 Write-Host "[5/5] Publishing to GitHub Releases..." -ForegroundColor Yellow
 
 $ghArgs = @("release", "create", $Tag)
-foreach ($f in $ExeFiles) {
+foreach ($f in $ReleaseFiles) {
     $ghArgs += $f.FullName
 }
 $ghArgs += @("--title", $Title, "--notes-file", $TempNotesFile)
@@ -148,7 +151,7 @@ if ($Prerelease) {
 $existingCheck = gh release view $Tag 2>&1
 if ($LASTEXITCODE -eq 0) {
     Write-Host "Release $Tag already exists. Uploading new binaries..." -ForegroundColor Yellow
-    foreach ($f in $ExeFiles) {
+    foreach ($f in $ReleaseFiles) {
         gh release upload $Tag $f.FullName --clobber
     }
 } else {

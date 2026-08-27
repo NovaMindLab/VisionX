@@ -13,6 +13,7 @@ import { AudioManager } from './managers/AudioManager';
 import { DisplayManager } from './managers/DisplayManager';
 import { DeviceManager } from './managers/DeviceManager';
 import { ProtocolManager } from './managers/ProtocolManager';
+import { UpdateManager } from './managers/UpdateManager';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -23,6 +24,7 @@ const audioManager = new AudioManager();
 const displayManager = new DisplayManager();
 const deviceManager = new DeviceManager(serialManager, cameraManager, audioManager, displayManager);
 const protocolManager = new ProtocolManager();
+const updateManager = new UpdateManager();
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -85,6 +87,50 @@ function createWindow() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('camera:frame', frameData);
     }
+  });
+
+  // 差分自动升级事件转发
+  updateManager.on('checking', () => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:checking');
+    }
+  });
+
+  updateManager.on('update-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:available', info);
+    }
+  });
+
+  updateManager.on('update-not-available', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:not-available', info);
+    }
+  });
+
+  updateManager.on('download-progress', (progress) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:progress', progress);
+    }
+  });
+
+  updateManager.on('update-downloaded', (info) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:downloaded', info);
+    }
+  });
+
+  updateManager.on('error', (err) => {
+    if (mainWindow && !mainWindow.isDestroyed()) {
+      mainWindow.webContents.send('updater:error', err);
+    }
+  });
+
+  // 窗口准备好 3 秒后，静默检查是否有新版本发布
+  mainWindow.once('ready-to-show', () => {
+    setTimeout(() => {
+      updateManager.checkForUpdates();
+    }, 2500);
   });
 
   mainWindow.on('closed', () => {
@@ -217,6 +263,23 @@ function setupIpc() {
     } catch (err: any) {
       return { success: false, message: err.message };
     }
+  });
+
+  // 差分自动更新 IPC 路由
+  ipcMain.handle('updater:check', async () => {
+    return await updateManager.checkForUpdates();
+  });
+
+  ipcMain.handle('updater:download', async () => {
+    return await updateManager.startDownload();
+  });
+
+  ipcMain.handle('updater:install', () => {
+    updateManager.installNow();
+  });
+
+  ipcMain.handle('updater:get-version', () => {
+    return updateManager.getCurrentVersion();
   });
 }
 

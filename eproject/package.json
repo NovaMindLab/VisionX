@@ -20,6 +20,7 @@
   "author": "NovaMindLab",
   "license": "MIT",
   "dependencies": {
+    "electron-updater": "^6.8.9",
     "serialport": "^13.0.0",
     "vue": "^3.5.13"
   },
@@ -39,6 +40,13 @@
     "directories": {
       "output": "release"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "NovaMindLab",
+        "repo": "VisionX"
+      }
+    ],
     "afterPack": "./build/afterPack.js",
     "electronLanguages": [
       "zh-CN",
@@ -60,7 +68,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "differentialPackage": true
     }
   }
 }

@@ -104,6 +104,18 @@ export interface ElectronAPI {
   app: {
     saveLogToFile: (content: string, defaultName?: string) => Promise<{ success: boolean; filePath?: string }>;
   };
+  updater: {
+    check: () => Promise<{ success: boolean; message?: string }>;
+    download: () => Promise<{ success: boolean; message?: string }>;
+    install: () => void;
+    getVersion: () => Promise<string>;
+    onChecking: (callback: () => void) => () => void;
+    onUpdateAvailable: (callback: (info: { version: string; releaseDate?: string; releaseNotes?: string; currentVersion: string }) => void) => () => void;
+    onUpdateNotAvailable: (callback: (info: { currentVersion: string; latestVersion: string }) => void) => () => void;
+    onDownloadProgress: (callback: (progress: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void) => () => void;
+    onUpdateDownloaded: (callback: (info: { version: string }) => void) => () => void;
+    onError: (callback: (err: string) => void) => () => void;
+  };
 }
 
 declare global {

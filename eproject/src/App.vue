@@ -22,6 +22,14 @@
           <span class="tab-label">{{ tab.name }}</span>
         </button>
       </nav>
+
+      <!-- 顶部右侧工具栏 -->
+      <div class="header-actions">
+        <button class="btn-check-update" @click="checkUpdateManual" :disabled="isCheckingUpdate" title="检查 GitHub Releases 差分更新">
+          <span class="update-icon">🚀</span>
+          <span>{{ isCheckingUpdate ? '检查中...' : '检查更新' }}</span>
+        </button>
+      </div>
     </header>
 
     <!-- 核心视图区域 -->
@@ -30,11 +38,15 @@
         <component :is="currentViewComponent" />
       </keep-alive>
     </main>
+
+    <!-- 差分自动更新弹窗 -->
+    <UpdateModal />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue';
+import UpdateModal from './components/UpdateModal.vue';
 import SerialView from './views/SerialView.vue';
 import StatusView from './views/StatusView.vue';
 import HardwareTestView from './views/HardwareTestView.vue';
@@ -43,6 +55,20 @@ import AudioView from './views/AudioView.vue';
 
 const currentTab = ref('serial');
 const hasNewPhoto = ref(false);
+const isCheckingUpdate = ref(false);
+
+async function checkUpdateManual() {
+  isCheckingUpdate.value = true;
+  if (window.electronAPI && window.electronAPI.updater) {
+    const res = await window.electronAPI.updater.check();
+    if (!res.success && res.message) {
+      alert(`检查更新提示: ${res.message}`);
+    }
+  }
+  setTimeout(() => {
+    isCheckingUpdate.value = false;
+  }, 2500);
+}
 
 const tabs = computed(() => [
   { id: 'serial', name: 'ESP32 串口', icon: '⚡' },
@@ -53,6 +79,7 @@ const tabs = computed(() => [
 ]);
 
 let unsubPhoto: (() => void) | null = null;
+let unsubNotAvailable: (() => void) | null = null;
 
 onMounted(() => {
   if (window.electronAPI && window.electronAPI.camera) {
@@ -62,6 +89,14 @@ onMounted(() => {
       setTimeout(() => {
         hasNewPhoto.value = false;
       }, 5000);
+    });
+  }
+
+  if (window.electronAPI && window.electronAPI.updater) {
+    unsubNotAvailable = window.electronAPI.updater.onUpdateNotAvailable((info) => {
+      if (isCheckingUpdate.value) {
+        alert(`当前已是最新版本 (v${info.currentVersion})！无需更新。`);
+      }
     });
   }
 });
@@ -194,5 +229,40 @@ body {
   flex: 1;
   padding: 16px;
   overflow: hidden;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+}
+
+.btn-check-update {
+  background: #0f172a;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 5px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.15s ease;
+  font-weight: 500;
+}
+
+.btn-check-update:hover:not(:disabled) {
+  color: #38bdf8;
+  border-color: #0284c7;
+  background: #1e293b;
+}
+
+.btn-check-update:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.update-icon {
+  font-size: 13px;
 }
 </style>

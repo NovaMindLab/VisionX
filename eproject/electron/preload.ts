@@ -96,6 +96,43 @@ const electronAPI = {
     saveLogToFile: (content: string, defaultName?: string): Promise<{ success: boolean; filePath?: string }> =>
       ipcRenderer.invoke('app:save-log', content, defaultName),
   },
+
+  updater: {
+    check: () => ipcRenderer.invoke('updater:check'),
+    download: () => ipcRenderer.invoke('updater:download'),
+    install: () => ipcRenderer.invoke('updater:install'),
+    getVersion: () => ipcRenderer.invoke('updater:get-version'),
+    onChecking: (cb: () => void) => {
+      const handler = () => cb();
+      ipcRenderer.on('updater:checking', handler);
+      return () => ipcRenderer.removeListener('updater:checking', handler);
+    },
+    onUpdateAvailable: (cb: (info: any) => void) => {
+      const handler = (_e: any, info: any) => cb(info);
+      ipcRenderer.on('updater:available', handler);
+      return () => ipcRenderer.removeListener('updater:available', handler);
+    },
+    onUpdateNotAvailable: (cb: (info: any) => void) => {
+      const handler = (_e: any, info: any) => cb(info);
+      ipcRenderer.on('updater:not-available', handler);
+      return () => ipcRenderer.removeListener('updater:not-available', handler);
+    },
+    onDownloadProgress: (cb: (progress: any) => void) => {
+      const handler = (_e: any, progress: any) => cb(progress);
+      ipcRenderer.on('updater:progress', handler);
+      return () => ipcRenderer.removeListener('updater:progress', handler);
+    },
+    onUpdateDownloaded: (cb: (info: any) => void) => {
+      const handler = (_e: any, info: any) => cb(info);
+      ipcRenderer.on('updater:downloaded', handler);
+      return () => ipcRenderer.removeListener('updater:downloaded', handler);
+    },
+    onError: (cb: (err: string) => void) => {
+      const handler = (_e: any, err: string) => cb(err);
+      ipcRenderer.on('updater:error', handler);
+      return () => ipcRenderer.removeListener('updater:error', handler);
+    },
+  },
 };
 
 contextBridge.exposeInMainWorld('electronAPI', electronAPI);
