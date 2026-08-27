@@ -6,6 +6,8 @@
 node_modules/
 dist/
 dist-electron/
+release/
+eproject/release/
 out/
 .npm
 npm-debug.log*
