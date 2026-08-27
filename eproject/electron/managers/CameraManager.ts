@@ -14,6 +14,13 @@ export interface CameraState {
   error?: string;
 }
 
+export interface PhotoData {
+  base64: string;
+  dataUri: string;
+  size: number;
+  time: string;
+}
+
 export class CameraManager extends EventEmitter {
   private state: CameraState = {
     model: 'OV2640 (Seeed XIAO Sense DVP)',
@@ -22,8 +29,20 @@ export class CameraManager extends EventEmitter {
     fps: 15,
   };
 
+  private lastPhoto: PhotoData | null = null;
+
   public getState(): CameraState {
     return { ...this.state };
+  }
+
+  public setLastPhoto(photo: PhotoData) {
+    this.lastPhoto = photo;
+    this.state.lastCaptureTime = photo.time;
+    this.emit('photo-captured', photo);
+  }
+
+  public getLastPhoto(): PhotoData | null {
+    return this.lastPhoto;
   }
 
   public setStreaming(isStreaming: boolean) {

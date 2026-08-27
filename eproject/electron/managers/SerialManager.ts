@@ -238,81 +238,140 @@ export class SerialManager extends EventEmitter {
   private expectedFrameSize: number = 0;
 
   /**
-   * 处理流入的二进制数据，按行解析并分发
+   * 处理流入的二进制数据，支持流式 Base64 与多帧高速直通
    */
   private handleIncomingData(chunk: Buffer) {
     const text = chunk.toString('utf-8');
     this.rxBuffer += text;
 
-    const lines = this.rxBuffer.split(/\r?\n/);
-    // 保留最后一个可能未完整的片段
-    this.rxBuffer = lines.pop() || '';
+    let progress = true;
+    while (progress) {
+      progress = false;
 
-    for (const line of lines) {
-      const trimmed = line.trim();
-      if (!trimmed) continue;
+      // 1. 正在接收单张照片 (IMG)
+      if (this.isReceivingImage) {
+        const endMarker = '===IMG_END===';
+        const endIdx = this.rxBuffer.indexOf(endMarker);
+        if (endIdx !== -1) {
+          const payload = this.rxBuffer.slice(0, endIdx);
+          this.imageBuffer += payload.replace(/[\r\n\s]/g, '');
+          this.rxBuffer = this.rxBuffer.slice(endIdx + endMarker.length);
 
-      // 1. 探测单张拍照数据帧 (IMG)
-      if (trimmed.startsWith('===IMG_START')) {
+          if (this.imageBuffer.length > 0) {
+            const rawB64 = this.imageBuffer;
+            const dataUri = rawB64.startsWith('data:image') ? rawB64 : `data:image/jpeg;base64,${rawB64}`;
+            const size = this.expectedImageSize || Math.round((rawB64.length * 3) / 4);
+            const time = new Date().toLocaleTimeString();
+
+            this.emit('image', {
+              base64: rawB64,
+              dataUri,
+              size,
+              time,
+            });
+            this.emit('line', `[CAMERA] ✓ 照片传输完成并解码成功！大小: ${size} 字节`);
+          }
+          this.isReceivingImage = false;
+          this.imageBuffer = '';
+          progress = true;
+          continue;
+        } else {
+          // 增量移入 imageBuffer，保留末尾 20 字符以防标记被切断
+          if (this.rxBuffer.length > 30) {
+            const safeLen = this.rxBuffer.length - 20;
+            this.imageBuffer += this.rxBuffer.slice(0, safeLen).replace(/[\r\n\s]/g, '');
+            this.rxBuffer = this.rxBuffer.slice(safeLen);
+          }
+          break;
+        }
+      }
+
+      // 2. 正在接收连续视频流 (FRAME)
+      if (this.isReceivingFrame) {
+        const endMarker = '===FRAME_END===';
+        const endIdx = this.rxBuffer.indexOf(endMarker);
+        if (endIdx !== -1) {
+          const payload = this.rxBuffer.slice(0, endIdx);
+          this.frameBuffer += payload.replace(/[\r\n\s]/g, '');
+          this.rxBuffer = this.rxBuffer.slice(endIdx + endMarker.length);
+
+          if (this.frameBuffer.length > 0) {
+            const rawB64 = this.frameBuffer;
+            const dataUri = rawB64.startsWith('data:image') ? rawB64 : `data:image/jpeg;base64,${rawB64}`;
+            const size = this.expectedFrameSize || Math.round((rawB64.length * 3) / 4);
+
+            this.emit('frame', {
+              dataUri,
+              size,
+              timestamp: Date.now(),
+            });
+          }
+          this.isReceivingFrame = false;
+          this.frameBuffer = '';
+          progress = true;
+          continue;
+        } else {
+          if (this.rxBuffer.length > 30) {
+            const safeLen = this.rxBuffer.length - 20;
+            this.frameBuffer += this.rxBuffer.slice(0, safeLen).replace(/[\r\n\s]/g, '');
+            this.rxBuffer = this.rxBuffer.slice(safeLen);
+          }
+          break;
+        }
+      }
+
+      // 3. 探测开始标志
+      const imgStartMatch = this.rxBuffer.match(/===IMG_START:(\d+)===/);
+      const frameStartMatch = this.rxBuffer.match(/===FRAME_START:(\d+)===/);
+
+      if (imgStartMatch && imgStartMatch.index !== undefined) {
+        const before = this.rxBuffer.slice(0, imgStartMatch.index);
+        if (before) {
+          this.dispatchLines(before);
+        }
         this.isReceivingImage = true;
         this.imageBuffer = '';
-        const sizeMatch = trimmed.match(/===IMG_START:(\d+)===/);
-        this.expectedImageSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
+        this.expectedImageSize = parseInt(imgStartMatch[1], 10);
         this.emit('line', `[CAMERA] 开始接收 ESP32 照片数据流 (预计大小: ${this.expectedImageSize || '未知'} 字节)...`);
+        this.rxBuffer = this.rxBuffer.slice(imgStartMatch.index + imgStartMatch[0].length);
+        progress = true;
         continue;
       }
 
-      if (trimmed.startsWith('===IMG_END===')) {
-        if (this.isReceivingImage && this.imageBuffer.length > 0) {
-          const rawB64 = this.imageBuffer;
-          this.emit('image', {
-            base64: rawB64,
-            dataUri: rawB64.startsWith('data:image') ? rawB64 : `data:image/jpeg;base64,${rawB64}`,
-            size: this.expectedImageSize || Math.round((rawB64.length * 3) / 4),
-            time: new Date().toLocaleTimeString(),
-          });
-          this.emit('line', `[CAMERA] ✓ 照片传输完成并解码成功！大小: ${Math.round((rawB64.length * 3) / 4)} 字节`);
+      if (frameStartMatch && frameStartMatch.index !== undefined) {
+        const before = this.rxBuffer.slice(0, frameStartMatch.index);
+        if (before) {
+          this.dispatchLines(before);
         }
-        this.isReceivingImage = false;
-        this.imageBuffer = '';
-        continue;
-      }
-
-      if (this.isReceivingImage) {
-        this.imageBuffer += trimmed;
-        continue;
-      }
-
-      // 2. 探测连续视频流数据帧 (FRAME) - 静默高效直通，不刷终端日志
-      if (trimmed.startsWith('===FRAME_START')) {
         this.isReceivingFrame = true;
         this.frameBuffer = '';
-        const sizeMatch = trimmed.match(/===FRAME_START:(\d+)===/);
-        this.expectedFrameSize = sizeMatch ? parseInt(sizeMatch[1], 10) : 0;
+        this.expectedFrameSize = parseInt(frameStartMatch[1], 10);
+        this.rxBuffer = this.rxBuffer.slice(frameStartMatch.index + frameStartMatch[0].length);
+        progress = true;
         continue;
       }
 
-      if (trimmed.startsWith('===FRAME_END===')) {
-        if (this.isReceivingFrame && this.frameBuffer.length > 0) {
-          const rawB64 = this.frameBuffer;
-          this.emit('frame', {
-            dataUri: rawB64.startsWith('data:image') ? rawB64 : `data:image/jpeg;base64,${rawB64}`,
-            size: this.expectedFrameSize || Math.round((rawB64.length * 3) / 4),
-            timestamp: Date.now(),
-          });
+      // 4. 常规串口换行文本行
+      const nlIdx = this.rxBuffer.search(/\r?\n/);
+      if (nlIdx !== -1) {
+        const line = this.rxBuffer.slice(0, nlIdx);
+        const match = this.rxBuffer.slice(nlIdx).match(/^\r?\n/);
+        const skip = match ? match[0].length : 1;
+        this.rxBuffer = this.rxBuffer.slice(nlIdx + skip);
+        if (line.trim()) {
+          this.emit('line', line);
         }
-        this.isReceivingFrame = false;
-        this.frameBuffer = '';
-        continue;
+        progress = true;
       }
+    }
+  }
 
-      if (this.isReceivingFrame) {
-        this.frameBuffer += trimmed;
-        continue;
+  private dispatchLines(text: string) {
+    const lines = text.split(/\r?\n/);
+    for (const line of lines) {
+      if (line.trim()) {
+        this.emit('line', line);
       }
-
-      // 3. 常规串口文本行
-      this.emit('line', line);
     }
   }
 

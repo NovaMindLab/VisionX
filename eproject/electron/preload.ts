@@ -34,6 +34,7 @@ const electronAPI = {
       ipcRenderer.invoke('serial:send', data),
     setSignals: (signals: { dtr?: boolean; rts?: boolean }): Promise<boolean> =>
       ipcRenderer.invoke('serial:set-signals', signals),
+    getStatus: (): Promise<SerialStatus> => ipcRenderer.invoke('serial:get-status'),
     onLine: (callback: (line: string) => void) => {
       const handler = (_event: any, line: string) => callback(line);
       ipcRenderer.on('serial:line', handler);
@@ -63,6 +64,8 @@ const electronAPI = {
 
   camera: {
     getState: () => ipcRenderer.invoke('camera:get-state'),
+    getLastPhoto: (): Promise<{ base64: string; dataUri: string; size: number; time: string } | null> =>
+      ipcRenderer.invoke('camera:get-last-photo'),
     start: () => ipcRenderer.invoke('camera:start'),
     stop: () => ipcRenderer.invoke('camera:stop'),
     capture: () => ipcRenderer.invoke('camera:capture'),

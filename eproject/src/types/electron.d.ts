@@ -73,6 +73,7 @@ export interface ElectronAPI {
     disconnect: () => Promise<{ success: boolean; message?: string }>;
     send: (data: string) => Promise<{ success: boolean; message?: string }>;
     setSignals: (signals: { dtr?: boolean; rts?: boolean }) => Promise<boolean>;
+    getStatus: () => Promise<SerialStatus>;
     onLine: (callback: (line: string) => void) => () => void;
     onStatus: (callback: (status: SerialStatus) => void) => () => void;
     onPortsChanged: (callback: (ports: SerialPortInfo[]) => void) => () => void;
@@ -84,6 +85,7 @@ export interface ElectronAPI {
   };
   camera: {
     getState: () => Promise<any>;
+    getLastPhoto: () => Promise<{ base64: string; dataUri: string; size: number; time: string } | null>;
     start: () => Promise<any>;
     stop: () => Promise<any>;
     capture: () => Promise<any>;

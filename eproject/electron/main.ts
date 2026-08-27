@@ -79,6 +79,7 @@ function createWindow() {
   });
 
   serialManager.on('image', (imgData) => {
+    cameraManager.setLastPhoto(imgData);
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('camera:photo', imgData);
     }
@@ -159,6 +160,10 @@ function setupIpc() {
     return await serialManager.send(formatted);
   });
 
+  ipcMain.handle('serial:get-status', () => {
+    return serialManager.getStatus();
+  });
+
   ipcMain.handle('serial:set-signals', async (_e, signals) => {
     return await serialManager.setSignals(signals);
   });
@@ -177,26 +182,26 @@ function setupIpc() {
     return cameraManager.getState();
   });
 
+  ipcMain.handle('camera:get-last-photo', () => {
+    return cameraManager.getLastPhoto();
+  });
+
   ipcMain.handle('camera:start', async () => {
     cameraManager.setStreaming(true);
-    await serialManager.send('STREAM_START\r\n');
-    return { success: true };
+    return await serialManager.send('STREAM_START\r\n');
   });
 
   ipcMain.handle('camera:stop', async () => {
     cameraManager.setStreaming(false);
-    await serialManager.send('STREAM_STOP\r\n');
-    return { success: true };
+    return await serialManager.send('STREAM_STOP\r\n');
   });
 
   ipcMain.handle('camera:set-resolution', async (_e, resolution: string) => {
-    await serialManager.send(`RES_${resolution.toUpperCase()}\r\n`);
-    return { success: true };
+    return await serialManager.send(`RES_${resolution.toUpperCase()}\r\n`);
   });
 
   ipcMain.handle('camera:capture', async () => {
-    await serialManager.send('CAMERA_CAPTURE\r\n');
-    return { success: true };
+    return await serialManager.send('CAMERA_CAPTURE\r\n');
   });
 
   ipcMain.handle('camera:save-photo', async (_e, dataUri: string, defaultName = 'smartglass_photo.jpg') => {

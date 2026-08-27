@@ -59,6 +59,7 @@ void streamPhotoBase64(camera_fb_t *fb) {
         Serial.write((const uint8_t*)chunk, 4);
     }
     Serial.println("\n===IMG_END===");
+    Serial.flush();
 }
 
 // 流式 Base64 发送连续视频帧 (带 FRAME 标签，供上位机连续渲染)
@@ -79,6 +80,7 @@ void streamFrameBase64(camera_fb_t *fb) {
         Serial.write((const uint8_t*)chunk, 4);
     }
     Serial.println("\n===FRAME_END===");
+    Serial.flush();
 }
 
 void initCamera() {
