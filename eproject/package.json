@@ -1,6 +1,6 @@
 {
   "name": "smart-glass-debug-console",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "VisionX Smart Glass Debug Console for ESP32-S3",
   "main": "dist-electron/main.js",
   "scripts": {
@@ -39,6 +39,13 @@
     "directories": {
       "output": "release"
     },
+    "afterPack": "./build/afterPack.js",
+    "electronLanguages": [
+      "zh-CN",
+      "zh_CN",
+      "en-US",
+      "en"
+    ],
     "files": [
       "dist/**/*",
       "dist-electron/**/*",
